@@ -81,6 +81,23 @@ if __name__ == "__main__":
     print("SigLIP Embedding API Test Client")
     print("="*50)
 
+    # Check server status
+    try:
+        response = requests.get(f"{BASE_URL}/")
+        if response.status_code == 200:
+            info = response.json()
+            print(f"\nServer Info:")
+            print(f"  Version: {info.get('version')}")
+            print(f"  Model: {info.get('model')}")
+            print(f"  Device: {info['device'].get('device', 'unknown')}")
+            if 'gpu_name' in info['device']:
+                print(f"  GPU: {info['device']['gpu_name']}")
+                print(f"  GPU Memory: {info['device']['gpu_memory_total_gb']} GB")
+            print("="*50)
+    except Exception as e:
+        print(f"Warning: Could not get server info: {e}")
+        print("="*50)
+
     # Test text embedding
     text_embedding = test_text_embedding()
 

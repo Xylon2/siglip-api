@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  siglip-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    ports:
+      - "8000:8000"
+    environment:
+      - TRANSFORMERS_CACHE=/app/cache
+      - DEVICE=cuda
+    volumes:
+      - model-cache:/app/cache
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  model-cache:

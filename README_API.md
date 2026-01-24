@@ -6,6 +6,7 @@ A FastAPI microservice that provides vector embeddings for text and images using
 
 - **Text Embeddings**: Generate 1152-dimensional embeddings from text
 - **Image Embeddings**: Generate 1152-dimensional embeddings from images
+- **GPU Acceleration**: Automatic GPU detection with 10-20x speedup
 - **Efficient**: Model loaded once at startup, not on every request
 - **Multiple Input Methods**: Support for base64-encoded images or direct file uploads
 
@@ -21,8 +22,17 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+**GPU Support (Local)**:
+- Ensure you have CUDA installed (CUDA 11.8+ recommended)
+- Install PyTorch with CUDA support:
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+```
+- See [GPU_SETUP.md](GPU_SETUP.md) for detailed GPU setup instructions
+
 ### Option 2: Docker
 
+**CPU**:
 ```bash
 # Build and run with Docker Compose
 docker-compose up -d
@@ -32,13 +42,39 @@ docker build -t siglip-api .
 docker run -p 8000:8000 siglip-api
 ```
 
+**GPU**:
+```bash
+# Prerequisites:
+# - NVIDIA GPU with driver installed
+# - NVIDIA Container Toolkit installed (nvidia-docker2)
+
+# Build and run with GPU support
+docker-compose -f docker-compose.gpu.yml up -d
+
+# Or build and run with Docker directly
+docker build -f Dockerfile.gpu -t siglip-api-gpu .
+docker run --gpus all -p 8000:8000 -e DEVICE=cuda siglip-api-gpu
+```
+
 ## Usage
 
 ### Start the Server
 
 #### Local
+
+**CPU (default)**:
 ```bash
 python app.py
+```
+
+**GPU**:
+```bash
+DEVICE=cuda python app.py
+```
+
+**Explicit CPU**:
+```bash
+DEVICE=cpu python app.py
 ```
 
 The server will start on `http://localhost:8000`
@@ -49,8 +85,15 @@ uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 #### Docker
+
+**CPU**:
 ```bash
 docker-compose up -d
+```
+
+**GPU** (requires NVIDIA Docker runtime):
+```bash
+docker-compose -f docker-compose.gpu.yml up -d
 ```
 
 ### API Endpoints
@@ -188,9 +231,41 @@ print(f"Similarity: {similarity:.2f}%")
 - **Model**: google/siglip-so400m-patch14-384
 - **Embedding Dimension**: 1152
 - **Normalization**: L2 normalized (ready for cosine similarity)
+- **Model Size**: ~1.5 GB
+
+## GPU Configuration
+
+The service automatically detects and uses GPU if available. You can control this with the `DEVICE` environment variable:
+
+- `auto` (default): Use GPU if available, otherwise CPU
+- `cuda`: Force GPU usage (fails if no GPU available)
+- `cpu`: Force CPU usage
+
+**Examples**:
+```bash
+# Auto-detect
+python app.py
+
+# Force GPU
+DEVICE=cuda python app.py
+
+# Force CPU
+DEVICE=cpu python app.py
+```
+
+**GPU Memory Requirements**:
+- Model: ~1.5 GB
+- Runtime: ~2-3 GB total
+- Recommended: 4GB+ VRAM
+
+**Performance**:
+- CPU: ~1-2 seconds per request
+- GPU: ~50-200ms per request (10-20x faster)
 
 ## Notes
 
 - The model is loaded once at startup, making subsequent requests fast
 - All embeddings are L2-normalized, suitable for cosine similarity calculations
 - Text embeddings use max_length padding as required by SigLIP
+- GPU usage is automatically detected and configured
+- Check `/health` endpoint to verify device being used
