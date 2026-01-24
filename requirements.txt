@@ -1,0 +1,9 @@
+torch
+transformers
+pillow
+sentencepiece
+protobuf
+torchvision
+fastapi
+uvicorn[standard]
+python-multipart
