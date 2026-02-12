@@ -55,10 +55,16 @@ class ModelService:
         with torch.no_grad():
             text_features = self.model.get_text_features(**text_inputs)
 
-        # Normalize
+        # Normalize - squeeze to remove any extra dimensions
         text_vector = text_features[0] / text_features[0].norm(dim=-1, keepdim=True)
-        # Convert to flat list
-        return text_vector.cpu().numpy().flatten().tolist()
+        text_vector = text_vector.squeeze()
+
+        # Convert to flat list - ensure 1D array
+        embedding_array = text_vector.cpu().numpy()
+        if embedding_array.ndim > 1:
+            embedding_array = embedding_array.flatten()
+
+        return embedding_array.tolist()
 
     def get_image_embedding(self, image: Image.Image) -> list[float]:
         image_inputs = self.processor(images=image, return_tensors="pt")
@@ -69,10 +75,16 @@ class ModelService:
         with torch.no_grad():
             image_features = self.model.get_image_features(**image_inputs)
 
-        # Normalize
+        # Normalize - squeeze to remove any extra dimensions
         image_vector = image_features[0] / image_features[0].norm(dim=-1, keepdim=True)
-        # Convert to flat list
-        return image_vector.cpu().numpy().flatten().tolist()
+        image_vector = image_vector.squeeze()
+
+        # Convert to flat list - ensure 1D array
+        embedding_array = image_vector.cpu().numpy()
+        if embedding_array.ndim > 1:
+            embedding_array = embedding_array.flatten()
+
+        return embedding_array.tolist()
 
 model_service = ModelService()
 
