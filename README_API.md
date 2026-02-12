@@ -6,7 +6,7 @@ A FastAPI microservice that provides vector embeddings for text and images using
 
 - **Text Embeddings**: Generate 1152-dimensional embeddings from text
 - **Image Embeddings**: Generate 1152-dimensional embeddings from images
-- **GPU Acceleration**: Automatic GPU detection with 10-20x speedup
+- **CPU Optimized**: Runs efficiently on CPU without GPU requirements
 - **Efficient**: Model loaded once at startup, not on every request
 - **Multiple Input Methods**: Support for base64-encoded images or direct file uploads
 
@@ -20,31 +20,12 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-**GPU Support**:
-- Ensure you have CUDA installed (CUDA 11.8+ recommended)
-- Install PyTorch with CUDA support:
-```bash
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-```
-- See [GPU_SETUP.md](GPU_SETUP.md) for detailed GPU setup instructions
-
 ## Usage
 
 ### Start the Server
 
-**CPU (default)**:
 ```bash
 python app.py
-```
-
-**GPU**:
-```bash
-DEVICE=cuda python app.py
-```
-
-**Explicit CPU**:
-```bash
-DEVICE=cpu python app.py
 ```
 
 The server will start on `http://localhost:8000`
@@ -191,39 +172,15 @@ print(f"Similarity: {similarity:.2f}%")
 - **Normalization**: L2 normalized (ready for cosine similarity)
 - **Model Size**: ~1.5 GB
 
-## GPU Configuration
+## Performance
 
-The service automatically detects and uses GPU if available. You can control this with the `DEVICE` environment variable:
-
-- `auto` (default): Use GPU if available, otherwise CPU
-- `cuda`: Force GPU usage (fails if no GPU available)
-- `cpu`: Force CPU usage
-
-**Examples**:
-```bash
-# Auto-detect
-python app.py
-
-# Force GPU
-DEVICE=cuda python app.py
-
-# Force CPU
-DEVICE=cpu python app.py
-```
-
-**GPU Memory Requirements**:
-- Model: ~1.5 GB
-- Runtime: ~2-3 GB total
-- Recommended: 4GB+ VRAM
-
-**Performance**:
-- CPU: ~1-2 seconds per request
-- GPU: ~50-200ms per request (10-20x faster)
+- **CPU**: ~1-2 seconds per request
+- Model is loaded once at startup for optimal performance
 
 ## Notes
 
 - The model is loaded once at startup, making subsequent requests fast
 - All embeddings are L2-normalized, suitable for cosine similarity calculations
 - Text embeddings use max_length padding as required by SigLIP
-- GPU usage is automatically detected and configured
-- Check `/health` endpoint to verify device being used
+- Runs on CPU for broad compatibility
+- Check `/health` endpoint to verify service status

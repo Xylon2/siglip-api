@@ -6,7 +6,6 @@ from transformers import AutoProcessor, AutoModel
 import base64
 from io import BytesIO
 import uvicorn
-import os
 
 app = FastAPI(title="SigLIP Embedding Service")
 
@@ -28,19 +27,9 @@ class ModelService:
 
     def load_model(self):
         if self.model is None:
-            # Determine device (GPU if available, otherwise CPU)
-            device_env = os.getenv("DEVICE", "auto").lower()
-
-            if device_env == "cuda" or (device_env == "auto" and torch.cuda.is_available()):
-                self.device = torch.device("cuda")
-                print(f"Using GPU: {torch.cuda.get_device_name(0)}")
-                print(f"CUDA Version: {torch.version.cuda}")
-                print(f"Available GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f} GB")
-            elif device_env == "cpu" or device_env == "auto":
-                self.device = torch.device("cpu")
-                print("Using CPU")
-            else:
-                raise ValueError(f"Invalid DEVICE value: {device_env}. Use 'auto', 'cuda', or 'cpu'")
+            # Use CPU only
+            self.device = torch.device("cpu")
+            print("Using CPU")
 
             print("Loading SigLIP model... (this may take a moment)")
             self.model = AutoModel.from_pretrained("google/siglip-so400m-patch14-384")
@@ -50,7 +39,7 @@ class ModelService:
             self.model = self.model.to(self.device)
             self.model.eval()
 
-            print(f"Model loaded successfully on {self.device}!")
+            print("Model loaded successfully on CPU!")
 
     def get_text_embedding(self, text: str) -> tuple[torch.Tensor, tuple]:
         text_inputs = self.processor(
@@ -93,21 +82,12 @@ async def startup_event():
 
 @app.get("/")
 async def root():
-    device_info = {
-        "device": str(model_service.device) if model_service.device else "not loaded",
-        "cuda_available": torch.cuda.is_available()
-    }
-
-    if torch.cuda.is_available() and model_service.device and model_service.device.type == "cuda":
-        device_info["gpu_name"] = torch.cuda.get_device_name(0)
-        device_info["gpu_memory_total_gb"] = round(torch.cuda.get_device_properties(0).total_memory / 1024**3, 2)
-
     return {
         "message": "SigLIP Embedding Service",
         "version": "1.0.0",
         "model": "google/siglip-so400m-patch14-384",
         "embedding_dimension": 1152,
-        "device": device_info,
+        "device": "cpu",
         "endpoints": {
             "text": "/embed/text",
             "image": "/embed/image",
@@ -118,17 +98,11 @@ async def root():
 
 @app.get("/health")
 async def health():
-    response = {
+    return {
         "status": "healthy",
         "model_loaded": model_service.model is not None,
-        "device": str(model_service.device) if model_service.device else None
+        "device": "cpu"
     }
-
-    if torch.cuda.is_available() and model_service.device and model_service.device.type == "cuda":
-        response["gpu_memory_allocated_gb"] = round(torch.cuda.memory_allocated(0) / 1024**3, 2)
-        response["gpu_memory_reserved_gb"] = round(torch.cuda.memory_reserved(0) / 1024**3, 2)
-
-    return response
 
 @app.post("/embed/text", response_model=EmbeddingResponse)
 async def embed_text(request: TextRequest):

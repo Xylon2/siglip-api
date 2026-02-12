@@ -1,30 +1,18 @@
-.PHONY: help install check-gpu run run-gpu run-cpu test clean
+.PHONY: help install run test clean
 
 help:
 	@echo "SigLIP Embedding Service - Available Commands"
 	@echo "=============================================="
-	@echo "install        - Install dependencies"
-	@echo "check-gpu      - Check GPU availability"
-	@echo "run            - Run service (auto-detect GPU)"
-	@echo "run-gpu        - Run service with GPU"
-	@echo "run-cpu        - Run service with CPU"
-	@echo "test           - Run test client"
-	@echo "clean          - Remove cache and build files"
+	@echo "install  - Install dependencies"
+	@echo "run      - Run service (CPU)"
+	@echo "test     - Run test client"
+	@echo "clean    - Remove cache and build files"
 
 install:
 	pip install -r requirements.txt
 
-check-gpu:
-	python check_gpu.py
-
 run:
 	python app.py
-
-run-gpu:
-	DEVICE=cuda python app.py
-
-run-cpu:
-	DEVICE=cpu python app.py
 
 test:
 	python test_client.py
