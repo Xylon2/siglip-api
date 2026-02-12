@@ -41,7 +41,7 @@ class ModelService:
 
             print("Model loaded successfully on CPU!")
 
-    def get_text_embedding(self, text: str) -> tuple[torch.Tensor, tuple]:
+    def get_text_embedding(self, text: str) -> list[float]:
         text_inputs = self.processor(
             text=[text],
             padding="max_length",
@@ -55,12 +55,12 @@ class ModelService:
         with torch.no_grad():
             text_features = self.model.get_text_features(**text_inputs)
 
-        # Move back to CPU for numpy conversion
+        # Normalize
         text_vector = text_features[0] / text_features[0].norm(dim=-1, keepdim=True)
-        text_vector = text_vector.cpu()
-        return text_vector, text_vector.shape
+        # Convert to flat list
+        return text_vector.cpu().numpy().flatten().tolist()
 
-    def get_image_embedding(self, image: Image.Image) -> tuple[torch.Tensor, tuple]:
+    def get_image_embedding(self, image: Image.Image) -> list[float]:
         image_inputs = self.processor(images=image, return_tensors="pt")
 
         # Move inputs to device
@@ -69,10 +69,10 @@ class ModelService:
         with torch.no_grad():
             image_features = self.model.get_image_features(**image_inputs)
 
-        # Move back to CPU for numpy conversion
+        # Normalize
         image_vector = image_features[0] / image_features[0].norm(dim=-1, keepdim=True)
-        image_vector = image_vector.cpu()
-        return image_vector, image_vector.shape
+        # Convert to flat list
+        return image_vector.cpu().numpy().flatten().tolist()
 
 model_service = ModelService()
 
@@ -107,10 +107,10 @@ async def health():
 @app.post("/embed/text", response_model=EmbeddingResponse)
 async def embed_text(request: TextRequest):
     try:
-        embedding, shape = model_service.get_text_embedding(request.text)
+        embedding = model_service.get_text_embedding(request.text)
         return EmbeddingResponse(
-            embedding=embedding.numpy().tolist(),
-            shape=list(shape)
+            embedding=embedding,
+            shape=[len(embedding)]
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating text embedding: {str(e)}")
@@ -121,10 +121,10 @@ async def embed_image(request: ImageRequest):
         image_data = base64.b64decode(request.image_base64)
         image = Image.open(BytesIO(image_data))
 
-        embedding, shape = model_service.get_image_embedding(image)
+        embedding = model_service.get_image_embedding(image)
         return EmbeddingResponse(
-            embedding=embedding.numpy().tolist(),
-            shape=list(shape)
+            embedding=embedding,
+            shape=[len(embedding)]
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating image embedding: {str(e)}")
@@ -135,10 +135,10 @@ async def embed_image_upload(file: UploadFile = File(...)):
         contents = await file.read()
         image = Image.open(BytesIO(contents))
 
-        embedding, shape = model_service.get_image_embedding(image)
+        embedding = model_service.get_image_embedding(image)
         return EmbeddingResponse(
-            embedding=embedding.numpy().tolist(),
-            shape=list(shape)
+            embedding=embedding,
+            shape=[len(embedding)]
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating image embedding: {str(e)}")
