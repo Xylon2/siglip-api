@@ -38,41 +38,139 @@ Available configuration options:
 
 ## Usage
 
-### Start the Server
+### Quick Start
 
-**Default (localhost only - recommended for development):**
+Start the development server:
 ```bash
-python app.py
+uvicorn app:app --reload
 ```
 
-The server will start on `http://localhost:8000` by default (only accessible from your machine).
+The server will start on `http://localhost:8000` and automatically reload on code changes.
 
-**Using .env file (recommended):**
+### Development
+
+For development, use uvicorn with the `--reload` flag for automatic code reloading:
+
 ```bash
-# Create your configuration file
-cp .env.example .env
-# Edit .env with your settings, then run:
-python app.py
-```
+# Default (localhost:8000 with auto-reload)
+uvicorn app:app --reload
 
-**Override with environment variables:**
-```bash
-# Listen on all interfaces (for production deployment behind firewall/proxy)
-HOST=0.0.0.0 PORT=8000 python app.py
+# Custom host and port
+uvicorn app:app --host 127.0.0.1 --port 8080 --reload
 
-# Custom port on localhost
-PORT=8080 python app.py
-```
+# With detailed logging
+uvicorn app:app --reload --log-level debug
 
-**Configuration priority:** Environment variables > `.env` file > defaults
-
-**Alternatively, use uvicorn directly:**
-```bash
-# Localhost only
-uvicorn app:app --host 127.0.0.1 --port 8000 --reload
-
-# All interfaces
+# All interfaces (for testing across network)
 uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+```
+
+**Development best practices:**
+- Use `--reload` for automatic code reloading during development
+- Use `--log-level debug` for detailed logging when troubleshooting
+- Default `127.0.0.1` keeps the service local to your machine
+- Use `0.0.0.0` only when you need to access from other devices on your network
+
+### Production
+
+For production deployments, use uvicorn without `--reload` and with multiple workers:
+
+```bash
+# Production with 4 workers
+uvicorn app:app --host 0.0.0.0 --port 8000 --workers 4
+
+# With access logs disabled (better performance)
+uvicorn app:app --host 0.0.0.0 --port 8000 --workers 4 --no-access-log
+
+# Behind a reverse proxy (recommended)
+uvicorn app:app --host 127.0.0.1 --port 8000 --workers 4 --proxy-headers
+```
+
+**Production deployment recommendations:**
+
+1. **Workers**: Use multiple workers for better performance
+   - Formula: `(2 * CPU_cores) + 1`
+   - Example: 4-core CPU = 9 workers
+
+2. **Reverse Proxy**: Run behind nginx or similar
+   - Bind to `127.0.0.1` and let the proxy handle external traffic
+   - Use `--proxy-headers` to trust forwarded headers
+
+3. **Process Manager**: Use systemd, supervisor, or docker
+   - Ensures service restarts on failure
+   - Manages logs and monitoring
+
+4. **Environment Variables**: Use `.env` file or system environment
+   ```bash
+   # Example with environment variables
+   HOST=0.0.0.0 PORT=8000 uvicorn app:app --workers 4
+   ```
+
+### Using Make Commands
+
+Convenience commands are available via the Makefile:
+
+```bash
+# Development server with auto-reload
+make dev
+
+# Production server with workers
+make prod
+
+# Run tests
+make test
+
+# Show all commands
+make help
+```
+
+### Alternative: Direct Python Execution
+
+You can also run the app directly with Python (uses uvicorn internally):
+
+```bash
+# Using .env file configuration
+python app.py
+
+# With environment variables
+HOST=0.0.0.0 PORT=8080 python app.py
+```
+
+**Note:** This method uses settings from your `.env` file but doesn't support advanced uvicorn options like workers or reload.
+
+### Production Deployment with Systemd
+
+For production deployments on Linux, create a systemd service file at `/etc/systemd/system/siglip-embedding.service`:
+
+```ini
+[Unit]
+Description=SigLIP Embedding Service
+After=network.target
+
+[Service]
+Type=notify
+User=www-data
+WorkingDirectory=/path/to/siglip_poc
+Environment="PATH=/path/to/siglip_poc/venv/bin"
+ExecStart=/path/to/siglip_poc/venv/bin/uvicorn app:app --host 127.0.0.1 --port 8000 --workers 4
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start the service:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable siglip-embedding
+sudo systemctl start siglip-embedding
+sudo systemctl status siglip-embedding
+```
+
+View logs:
+```bash
+sudo journalctl -u siglip-embedding -f
 ```
 
 ## API Reference
@@ -144,15 +242,33 @@ Generate a 1152-dimensional embedding vector from input text.
 **Request Body**:
 ```json
 {
-  "text": "string (required)"
+  "text": "string (required, 1-5000 characters)"
 }
 ```
+
+**Validation Rules**:
+- Text must be between 1 and 5000 characters
+- Cannot be empty or contain only whitespace
+- Cannot contain null bytes
 
 **Response** (200 OK):
 ```json
 {
   "embedding": [0.123, -0.456, ...],  // Array of 1152 floats
   "shape": [1152]
+}
+```
+
+**Error Response** (422 Unprocessable Entity):
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "text"],
+      "msg": "Text cannot be empty or contain only whitespace",
+      "type": "value_error"
+    }
+  ]
 }
 ```
 

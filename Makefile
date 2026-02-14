@@ -1,18 +1,26 @@
-.PHONY: help install run test clean
+.PHONY: help install dev prod run test clean
 
 help:
 	@echo "SigLIP Embedding Service - Available Commands"
 	@echo "=============================================="
 	@echo "install  - Install dependencies"
-	@echo "run      - Run service (CPU)"
+	@echo "dev      - Run development server (auto-reload)"
+	@echo "prod     - Run production server (4 workers)"
+	@echo "run      - Run service (basic, for compatibility)"
 	@echo "test     - Run test client"
 	@echo "clean    - Remove cache and build files"
 
 install:
 	pip install -r requirements.txt
 
+dev:
+	uvicorn app:app --reload --log-level info
+
+prod:
+	uvicorn app:app --host 0.0.0.0 --port 8000 --workers 4
+
 run:
-	python app.py
+	uvicorn app:app
 
 test:
 	python test_client.py

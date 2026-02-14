@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, File, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 import torch
 from PIL import Image
 from transformers import AutoProcessor, AutoModel
@@ -14,7 +14,21 @@ load_dotenv()
 app = FastAPI(title="SigLIP Embedding Service")
 
 class TextRequest(BaseModel):
-    text: str
+    text: str = Field(..., min_length=1, max_length=5000, description="Text to embed (1-5000 characters)")
+
+    @field_validator('text')
+    @classmethod
+    def validate_text(cls, v: str) -> str:
+        # Strip whitespace and check if empty
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Text cannot be empty or contain only whitespace")
+
+        # Check for null bytes
+        if '\x00' in v:
+            raise ValueError("Text cannot contain null bytes")
+
+        return v
 
 class EmbeddingResponse(BaseModel):
     embedding: list[float]
