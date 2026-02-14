@@ -1,4 +1,4 @@
-.PHONY: help install check-gpu run run-gpu run-cpu docker-build docker-run docker-gpu test clean
+.PHONY: help install check-gpu run run-gpu run-cpu test clean
 
 help:
 	@echo "SigLIP Embedding Service - Available Commands"
@@ -8,9 +8,6 @@ help:
 	@echo "run            - Run service (auto-detect GPU)"
 	@echo "run-gpu        - Run service with GPU"
 	@echo "run-cpu        - Run service with CPU"
-	@echo "docker-build   - Build Docker image (CPU)"
-	@echo "docker-run     - Run Docker container (CPU)"
-	@echo "docker-gpu     - Run Docker container (GPU)"
 	@echo "test           - Run test client"
 	@echo "clean          - Remove cache and build files"
 
@@ -28,28 +25,6 @@ run-gpu:
 
 run-cpu:
 	DEVICE=cpu python app.py
-
-docker-build:
-	docker build -t siglip-api .
-
-docker-build-gpu:
-	docker build -f Dockerfile.gpu -t siglip-api-gpu .
-
-docker-run:
-	docker run -p 8000:8000 siglip-api
-
-docker-run-gpu:
-	docker run --gpus all -p 8000:8000 -e DEVICE=cuda siglip-api-gpu
-
-docker-compose-up:
-	docker-compose up -d
-
-docker-compose-gpu:
-	docker-compose -f docker-compose.gpu.yml up -d
-
-docker-compose-down:
-	docker-compose down
-	docker-compose -f docker-compose.gpu.yml down
 
 test:
 	python test_client.py

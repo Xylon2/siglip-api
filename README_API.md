@@ -12,8 +12,6 @@ A FastAPI microservice that provides vector embeddings for text and images using
 
 ## Installation
 
-### Option 1: Local Installation
-
 ```bash
 # Install dependencies
 pip install -r requirements.txt
@@ -22,7 +20,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-**GPU Support (Local)**:
+**GPU Support**:
 - Ensure you have CUDA installed (CUDA 11.8+ recommended)
 - Install PyTorch with CUDA support:
 ```bash
@@ -30,37 +28,9 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ```
 - See [GPU_SETUP.md](GPU_SETUP.md) for detailed GPU setup instructions
 
-### Option 2: Docker
-
-**CPU**:
-```bash
-# Build and run with Docker Compose
-docker-compose up -d
-
-# Or build and run with Docker directly
-docker build -t siglip-api .
-docker run -p 8000:8000 siglip-api
-```
-
-**GPU**:
-```bash
-# Prerequisites:
-# - NVIDIA GPU with driver installed
-# - NVIDIA Container Toolkit installed (nvidia-docker2)
-
-# Build and run with GPU support
-docker-compose -f docker-compose.gpu.yml up -d
-
-# Or build and run with Docker directly
-docker build -f Dockerfile.gpu -t siglip-api-gpu .
-docker run --gpus all -p 8000:8000 -e DEVICE=cuda siglip-api-gpu
-```
-
 ## Usage
 
 ### Start the Server
-
-#### Local
 
 **CPU (default)**:
 ```bash
@@ -82,18 +52,6 @@ The server will start on `http://localhost:8000`
 Alternatively, use uvicorn directly:
 ```bash
 uvicorn app:app --host 0.0.0.0 --port 8000 --reload
-```
-
-#### Docker
-
-**CPU**:
-```bash
-docker-compose up -d
-```
-
-**GPU** (requires NVIDIA Docker runtime):
-```bash
-docker-compose -f docker-compose.gpu.yml up -d
 ```
 
 ### API Endpoints
