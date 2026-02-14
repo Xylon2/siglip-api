@@ -74,7 +74,7 @@ if __name__ == "__main__":
     text_embedding = test_text_embedding()
 
     # Test image embedding with default image if it exists
-    image_path = "images/woods.avif"
+    image_path = "images/larisa-k-autumn-6708984_1280.jpg"
     image_embedding = test_image_embedding(image_path)
 
     # Calculate similarity between text and image

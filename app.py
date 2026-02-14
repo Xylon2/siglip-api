@@ -59,8 +59,6 @@ class ModelService:
     def get_text_embedding(self, text: str) -> list[float]:
         text_inputs = self.processor(
             text=[text],
-            padding="max_length",
-            truncation=True,
             return_tensors="pt"
         )
 
@@ -68,18 +66,21 @@ class ModelService:
         text_inputs = {k: v.to(self.device) for k, v in text_inputs.items()}
 
         with torch.no_grad():
-            text_features = self.model.get_text_features(**text_inputs)
+            # Get text model outputs
+            text_outputs = self.model.text_model(**text_inputs)
 
-        # Normalize - squeeze to remove any extra dimensions
-        text_vector = text_features[0] / text_features[0].norm(dim=-1, keepdim=True)
-        text_vector = text_vector.squeeze()
+            # Extract embeddings - use pooler_output if available
+            if hasattr(text_outputs, 'pooler_output') and text_outputs.pooler_output is not None:
+                text_features = text_outputs.pooler_output
+            else:
+                # Fall back to last hidden state at position 0 (CLS token)
+                text_features = text_outputs.last_hidden_state[:, 0, :]
 
-        # Convert to flat list - ensure 1D array
-        embedding_array = text_vector.cpu().numpy()
-        if embedding_array.ndim > 1:
-            embedding_array = embedding_array.flatten()
+        # Normalize (text_features should be [batch_size, embedding_dim])
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
 
-        return embedding_array.tolist()
+        # Return first batch item as flat list
+        return text_features[0].cpu().numpy().tolist()
 
     def get_image_embedding(self, image: Image.Image) -> list[float]:
         image_inputs = self.processor(images=image, return_tensors="pt")
@@ -88,18 +89,21 @@ class ModelService:
         image_inputs = {k: v.to(self.device) for k, v in image_inputs.items()}
 
         with torch.no_grad():
-            image_features = self.model.get_image_features(**image_inputs)
+            # Get vision model outputs
+            vision_outputs = self.model.vision_model(**image_inputs)
 
-        # Normalize - squeeze to remove any extra dimensions
-        image_vector = image_features[0] / image_features[0].norm(dim=-1, keepdim=True)
-        image_vector = image_vector.squeeze()
+            # Extract embeddings - use pooler_output if available
+            if hasattr(vision_outputs, 'pooler_output') and vision_outputs.pooler_output is not None:
+                image_features = vision_outputs.pooler_output
+            else:
+                # Fall back to last hidden state at position 0 (CLS token)
+                image_features = vision_outputs.last_hidden_state[:, 0, :]
 
-        # Convert to flat list - ensure 1D array
-        embedding_array = image_vector.cpu().numpy()
-        if embedding_array.ndim > 1:
-            embedding_array = embedding_array.flatten()
+        # Normalize (image_features should be [batch_size, embedding_dim])
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
 
-        return embedding_array.tolist()
+        # Return first batch item as flat list
+        return image_features[0].cpu().numpy().tolist()
 
 model_service = ModelService()
 
