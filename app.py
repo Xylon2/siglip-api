@@ -6,6 +6,11 @@ from transformers import AutoProcessor, AutoModel
 import base64
 from io import BytesIO
 import uvicorn
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if it exists
+load_dotenv()
 
 app = FastAPI(title="SigLIP Embedding Service")
 
@@ -156,4 +161,7 @@ async def embed_image_upload(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Error generating image embedding: {str(e)}")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Default to localhost for security, but allow override via HOST env var
+    host = os.getenv("HOST", "127.0.0.1")
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run(app, host=host, port=port)

@@ -20,18 +20,58 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+## Configuration
+
+The service can be configured using environment variables or a `.env` file:
+
+```bash
+# Copy the example configuration
+cp .env.example .env
+
+# Edit .env with your settings
+nano .env
+```
+
+Available configuration options:
+- `HOST` - Host to bind to (default: `127.0.0.1`)
+- `PORT` - Port to listen on (default: `8000`)
+
 ## Usage
 
 ### Start the Server
 
+**Default (localhost only - recommended for development):**
 ```bash
 python app.py
 ```
 
-The server will start on `http://localhost:8000`
+The server will start on `http://localhost:8000` by default (only accessible from your machine).
 
-Alternatively, use uvicorn directly:
+**Using .env file (recommended):**
 ```bash
+# Create your configuration file
+cp .env.example .env
+# Edit .env with your settings, then run:
+python app.py
+```
+
+**Override with environment variables:**
+```bash
+# Listen on all interfaces (for production deployment behind firewall/proxy)
+HOST=0.0.0.0 PORT=8000 python app.py
+
+# Custom port on localhost
+PORT=8080 python app.py
+```
+
+**Configuration priority:** Environment variables > `.env` file > defaults
+
+**Alternatively, use uvicorn directly:**
+```bash
+# Localhost only
+uvicorn app:app --host 127.0.0.1 --port 8000 --reload
+
+# All interfaces
 uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
