@@ -13,10 +13,7 @@ A FastAPI microservice that provides vector embeddings for text and images using
 ## Installation
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Or install as a package
+# Install as a package with dependencies
 pip install -e .
 ```
 

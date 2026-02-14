@@ -11,7 +11,7 @@ help:
 	@echo "clean    - Remove cache and build files"
 
 install:
-	pip install -r requirements.txt
+	pip install -e .
 
 dev:
 	uvicorn app:app --reload --log-level info
