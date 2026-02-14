@@ -155,8 +155,20 @@ async def embed_image_upload(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating image embedding: {str(e)}")
 
-if __name__ == "__main__":
+def main():
+    """Entry point for running the service."""
     # Default to localhost for security, but allow override via HOST env var
     host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", "8000"))
-    uvicorn.run(app, host=host, port=port)
+    workers = int(os.getenv("WORKERS", "1"))
+
+    uvicorn.run(
+        "app:app",
+        host=host,
+        port=port,
+        workers=workers,
+        log_level=os.getenv("LOG_LEVEL", "info")
+    )
+
+if __name__ == "__main__":
+    main()

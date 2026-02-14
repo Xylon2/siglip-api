@@ -12,9 +12,41 @@ A FastAPI microservice that provides vector embeddings for text and images using
 
 ## Installation
 
+### Development
+
 ```bash
 # Install as a package with dependencies
 pip install -e .
+```
+
+### Building for Deployment (PEX)
+
+Build a single executable file containing all dependencies:
+
+```bash
+# Install PEX builder
+pip install pex
+
+# Build the PEX file
+pex . --requirement setup.cfg --entry-point app:main --output-file dist/siglip-service.pex --python-shebang='/usr/bin/env python3'
+
+# Or use make
+make build
+```
+
+This creates `dist/siglip-service.pex` - a single executable file containing your app and all dependencies (similar to a Clojure uberjar).
+
+Deploy the PEX file to your server and run it:
+
+```bash
+# On server - no pip install needed!
+./siglip-service.pex
+
+# With environment variables
+HOST=0.0.0.0 PORT=8000 WORKERS=4 ./siglip-service.pex
+
+# Or use python directly
+python siglip-service.pex
 ```
 
 ## Configuration
@@ -137,7 +169,7 @@ HOST=0.0.0.0 PORT=8080 python app.py
 
 ### Production Deployment with Systemd
 
-For production deployments on Linux, create a systemd service file at `/etc/systemd/system/siglip-embedding.service`:
+Deploy the PEX file to your server (e.g., `/opt/siglip/siglip-service.pex`) and create a systemd service file at `/etc/systemd/system/siglip-embedding.service`:
 
 ```ini
 [Unit]
@@ -145,11 +177,13 @@ Description=SigLIP Embedding Service
 After=network.target
 
 [Service]
-Type=notify
+Type=simple
 User=www-data
-WorkingDirectory=/path/to/siglip_poc
-Environment="PATH=/path/to/siglip_poc/venv/bin"
-ExecStart=/path/to/siglip_poc/venv/bin/uvicorn app:app --host 127.0.0.1 --port 8000 --workers 4
+WorkingDirectory=/opt/siglip
+Environment="HOST=127.0.0.1"
+Environment="PORT=8000"
+Environment="WORKERS=4"
+ExecStart=/opt/siglip/siglip-service.pex
 Restart=always
 RestartSec=10
 
