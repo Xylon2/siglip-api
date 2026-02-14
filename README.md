@@ -5,10 +5,10 @@ A FastAPI microservice that provides vector embeddings for text and images using
 ## Features
 
 - **Text Embeddings**: Generate 1152-dimensional embeddings from text
-- **Image Embeddings**: Generate 1152-dimensional embeddings from images
+- **Image Embeddings**: Generate 1152-dimensional embeddings from images via file upload
 - **CPU Optimized**: Runs efficiently on CPU without GPU requirements
 - **Efficient**: Model loaded once at startup, not on every request
-- **Multiple Input Methods**: Support for base64-encoded images or direct file uploads
+- **Simple API**: Clean REST endpoints with automatic interactive documentation
 
 ## Installation
 
@@ -75,91 +75,153 @@ uvicorn app:app --host 127.0.0.1 --port 8000 --reload
 uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### API Endpoints
+## API Reference
 
-#### 1. Text Embedding
+### Overview
 
-**Endpoint**: `POST /embed/text`
+All endpoints return JSON responses. Embeddings are L2-normalized 1152-dimensional vectors suitable for cosine similarity calculations.
 
-**Request**:
+### Endpoints
+
+#### Service Information
+
+**`GET /`** - Get service information
+
+Returns metadata about the service, model, and available endpoints.
+
+**Response** (200 OK):
 ```json
 {
-  "text": "a photo of a cat"
+  "message": "SigLIP Embedding Service",
+  "version": "1.0.0",
+  "model": "google/siglip-so400m-patch14-384",
+  "embedding_dimension": 1152,
+  "device": "cpu",
+  "endpoints": {
+    "text": "/embed/text",
+    "image": "/embed/image",
+    "image_upload": "/embed/image/upload",
+    "health": "/health"
+  }
 }
 ```
 
-**Response**:
+**Example**:
+```bash
+curl http://localhost:8000/
+```
+
+---
+
+#### Health Check
+
+**`GET /health`** - Health check endpoint
+
+Returns the service health status and model loading state.
+
+**Response** (200 OK):
 ```json
 {
-  "embedding": [0.123, -0.456, ...],
+  "status": "healthy",
+  "model_loaded": true,
+  "device": "cpu"
+}
+```
+
+**Example**:
+```bash
+curl http://localhost:8000/health
+```
+
+---
+
+#### Text Embedding
+
+**`POST /embed/text`** - Generate embedding from text
+
+Generate a 1152-dimensional embedding vector from input text.
+
+**Request Body**:
+```json
+{
+  "text": "string (required)"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "embedding": [0.123, -0.456, ...],  // Array of 1152 floats
   "shape": [1152]
 }
 ```
 
-**Example with curl**:
+**Error Response** (500 Internal Server Error):
+```json
+{
+  "detail": "Error generating text embedding: <error message>"
+}
+```
+
+**Examples**:
+
 ```bash
+# curl
 curl -X POST "http://localhost:8000/embed/text" \
   -H "Content-Type: application/json" \
   -d '{"text": "a photo of a cat"}'
 ```
 
-**Example with Python**:
 ```python
+# Python
 import requests
 
 response = requests.post(
     "http://localhost:8000/embed/text",
     json={"text": "a photo of a cat"}
 )
-embedding = response.json()["embedding"]
+result = response.json()
+embedding = result["embedding"]  # List of 1152 floats
 ```
 
-#### 2. Image Embedding (Base64)
+---
 
-**Endpoint**: `POST /embed/image`
+#### Image Embedding
 
-**Request**:
+**`POST /embed/image/upload`** - Generate embedding from uploaded image file
+
+Generate a 1152-dimensional embedding vector from a multipart file upload.
+
+**Request**: `multipart/form-data`
+- `file`: Image file (required)
+
+**Supported formats**: JPEG, PNG, BMP, GIF, and other PIL-supported formats
+
+**Response** (200 OK):
 ```json
 {
-  "image_base64": "iVBORw0KGgoAAAANSUhEUg..."
-}
-```
-
-**Response**:
-```json
-{
-  "embedding": [0.123, -0.456, ...],
+  "embedding": [0.123, -0.456, ...],  // Array of 1152 floats
   "shape": [1152]
 }
 ```
 
-**Example with Python**:
-```python
-import requests
-import base64
-
-with open("image.jpg", "rb") as f:
-    image_b64 = base64.b64encode(f.read()).decode()
-
-response = requests.post(
-    "http://localhost:8000/embed/image",
-    json={"image_base64": image_b64}
-)
-embedding = response.json()["embedding"]
+**Error Response** (500 Internal Server Error):
+```json
+{
+  "detail": "Error generating image embedding: <error message>"
+}
 ```
 
-#### 3. Image Embedding (File Upload)
+**Examples**:
 
-**Endpoint**: `POST /embed/image/upload`
-
-**Example with curl**:
 ```bash
+# curl
 curl -X POST "http://localhost:8000/embed/image/upload" \
   -F "file=@image.jpg"
 ```
 
-**Example with Python**:
 ```python
+# Python
 import requests
 
 with open("image.jpg", "rb") as f:
@@ -167,26 +229,34 @@ with open("image.jpg", "rb") as f:
         "http://localhost:8000/embed/image/upload",
         files={"file": f}
     )
-embedding = response.json()["embedding"]
+result = response.json()
+embedding = result["embedding"]  # List of 1152 floats
 ```
 
-### Interactive Documentation
+---
 
-Once the server is running, visit:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+### Interactive API Documentation
 
-### Testing
+FastAPI provides automatic interactive API documentation:
 
-Use the provided test client to verify the API:
+- **Swagger UI**: `http://localhost:8000/docs` - Interactive API explorer with try-it-out functionality
+- **ReDoc**: `http://localhost:8000/redoc` - Clean, readable API documentation
 
-```bash
-python test_client.py
-```
+### Error Handling
 
-This will test both text and image embedding endpoints and calculate similarity scores.
+All endpoints return standard HTTP status codes:
 
-## Comparing Embeddings
+- **200 OK**: Request successful
+- **422 Unprocessable Entity**: Invalid request body (missing required fields, wrong types)
+- **500 Internal Server Error**: Server error (model inference failed, invalid image format, etc.)
+
+Error responses include a `detail` field with a descriptive error message.
+
+---
+
+## Working with Embeddings
+
+### Comparing Embeddings
 
 To calculate similarity between text and image embeddings:
 
@@ -205,22 +275,40 @@ print(f"Similarity: {similarity:.2f}%")
 # 15-25 = good/decent match
 ```
 
-## Model Information
+### Testing the API
+
+Use the provided test client to verify all endpoints:
+
+```bash
+python test_client.py
+```
+
+This will test text and image embedding endpoints and calculate similarity scores between them.
+
+---
+
+## Technical Details
+
+### Model Information
 
 - **Model**: google/siglip-so400m-patch14-384
 - **Embedding Dimension**: 1152
 - **Normalization**: L2 normalized (ready for cosine similarity)
 - **Model Size**: ~1.5 GB
+- **Device**: CPU (optimized for broad compatibility)
 
-## Performance
+### Performance
 
-- **CPU**: ~1-2 seconds per request
-- Model is loaded once at startup for optimal performance
+- **Startup time**: 5-10 seconds (model loading)
+- **Inference time (CPU)**: ~1-2 seconds per request
+- **Memory usage**: ~2-3 GB RAM
 
-## Notes
+The model is loaded once at startup and kept in memory for fast inference.
 
-- The model is loaded once at startup, making subsequent requests fast
-- All embeddings are L2-normalized, suitable for cosine similarity calculations
-- Text embeddings use max_length padding as required by SigLIP
-- Runs on CPU for broad compatibility
-- Check `/health` endpoint to verify service status
+### Implementation Notes
+
+- All embeddings are L2-normalized vectors suitable for cosine similarity calculations
+- Text embeddings use `max_length` padding as required by SigLIP
+- Image preprocessing handles various formats (JPEG, PNG, BMP, GIF, etc.)
+- Thread-safe model inference with PyTorch's `no_grad()` context
+- Embeddings are returned as flat arrays of 1152 floats

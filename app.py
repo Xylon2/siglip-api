@@ -3,7 +3,6 @@ from pydantic import BaseModel
 import torch
 from PIL import Image
 from transformers import AutoProcessor, AutoModel
-import base64
 from io import BytesIO
 import uvicorn
 import os
@@ -16,9 +15,6 @@ app = FastAPI(title="SigLIP Embedding Service")
 
 class TextRequest(BaseModel):
     text: str
-
-class ImageRequest(BaseModel):
-    image_base64: str
 
 class EmbeddingResponse(BaseModel):
     embedding: list[float]
@@ -107,8 +103,7 @@ async def root():
         "device": "cpu",
         "endpoints": {
             "text": "/embed/text",
-            "image": "/embed/image",
-            "image_upload": "/embed/image/upload",
+            "image": "/embed/image/upload",
             "health": "/health"
         }
     }
@@ -131,20 +126,6 @@ async def embed_text(request: TextRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating text embedding: {str(e)}")
-
-@app.post("/embed/image", response_model=EmbeddingResponse)
-async def embed_image(request: ImageRequest):
-    try:
-        image_data = base64.b64decode(request.image_base64)
-        image = Image.open(BytesIO(image_data))
-
-        embedding = model_service.get_image_embedding(image)
-        return EmbeddingResponse(
-            embedding=embedding,
-            shape=[len(embedding)]
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating image embedding: {str(e)}")
 
 @app.post("/embed/image/upload", response_model=EmbeddingResponse)
 async def embed_image_upload(file: UploadFile = File(...)):
