@@ -28,7 +28,7 @@ Build a single executable file containing all dependencies:
 pip install pex
 
 # Build the PEX file
-pex . --requirement setup.cfg --entry-point app:main --output-file dist/siglip-service.pex --python-shebang='/usr/bin/env python3'
+pex . --entry-point app:main --output-file dist/siglip-service.pex --python-shebang='/usr/bin/env python3'
 
 # Or use make
 make build
