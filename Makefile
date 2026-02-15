@@ -22,4 +22,8 @@ build:
 	pex . --entry-point app:main --output-file dist/siglip-service.pex --python-shebang='/usr/bin/env python3'
 
 clean:
-	rm -rf dist/ build/ *.egg-info __pycache__
+	rm -rf dist/ build/ *.egg-info __pycache__ wheels-cpu/
+
+clean-cache:
+	rm -rf ~/.cache/pip ~/.cache/pex
+	@echo "Cleared pip and pex caches"
