@@ -1,6 +1,7 @@
 import requests
 import numpy as np
 from pathlib import Path
+from decode_utils import decode_embedding, cosine_similarity
 
 BASE_URL = "http://localhost:8000"
 
@@ -13,9 +14,12 @@ def test_text_embedding():
 
     if response.status_code == 200:
         result = response.json()
+        embedding = decode_embedding(result)
         print(f"✓ Text embedding shape: {result['shape']}")
-        print(f"  First 5 values: {result['embedding'][:5]}")
-        return np.array(result['embedding'])
+        print(f"  Size (base64): {len(result['embedding'])} chars")
+        print(f"  Size (binary): {result['size_bytes']} bytes")
+        print(f"  First 5 values: {embedding[:5]}")
+        return embedding
     else:
         print(f"✗ Error: {response.status_code} - {response.text}")
         return None
@@ -35,18 +39,21 @@ def test_image_embedding(image_path):
 
     if response.status_code == 200:
         result = response.json()
+        embedding = decode_embedding(result)
         print(f"✓ Image embedding shape: {result['shape']}")
-        print(f"  First 5 values: {result['embedding'][:5]}")
-        return np.array(result['embedding'])
+        print(f"  Size (base64): {len(result['embedding'])} chars")
+        print(f"  Size (binary): {result['size_bytes']} bytes")
+        print(f"  First 5 values: {embedding[:5]}")
+        return embedding
     else:
         print(f"✗ Error: {response.status_code} - {response.text}")
         return None
 
-def calculate_similarity(embedding1, embedding2, label1="Vector 1", label2="Vector 2"):
+def calculate_similarity_score(embedding1, embedding2, label1="Vector 1", label2="Vector 2"):
     if embedding1 is None or embedding2 is None:
         return
 
-    similarity = np.dot(embedding1, embedding2) * 100
+    similarity = cosine_similarity(embedding1, embedding2) * 100
     print(f"\n{'='*50}")
     print(f"Similarity between {label1} and {label2}:")
     print(f"  {similarity:.2f}%")
@@ -79,6 +86,6 @@ if __name__ == "__main__":
 
     # Calculate similarity between text and image
     if text_embedding is not None and image_embedding is not None:
-        calculate_similarity(text_embedding, image_embedding,
-                           "Text: 'a photo of a forest'",
-                           f"Image: {image_path}")
+        calculate_similarity_score(text_embedding, image_embedding,
+                                  "Text: 'a photo of a forest'",
+                                  f"Image: {image_path}")

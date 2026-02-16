@@ -157,6 +157,36 @@ This will test text and image embedding endpoints and calculate similarity score
 
 ---
 
+### Response Structure
+
+All embedding endpoints return JSON with the following structure:
+
+```json
+{
+  "embedding": "base64-encoded-binary-data...",
+  "shape": [1152],
+  "size_bytes": 4608
+}
+```
+
+### Binary Format Specification
+
+- **Encoding**: Base64 string (for JSON compatibility)
+- **Underlying Format**: IEEE 754 binary32 (float32)
+- **Byte Order**: Little-endian
+- **Dimensions**: 1152 floats × 4 bytes each = 4,608 bytes
+- **Base64 Size**: 6,144 characters (4,608 bytes × 4/3 base64 overhead)
+
+### Cosine Similarity
+
+The embeddings are already L2-normalized by the model, so cosine similarity is simply the dot product:
+
+```python
+similarity = np.dot(embedding1, embedding2)
+```
+
+---
+
 ## Technical Details
 
 ### Model Information
@@ -172,6 +202,7 @@ This will test text and image embedding endpoints and calculate similarity score
 - **Startup time**: 5-10 seconds (model loading)
 - **Inference time (CPU)**: ~1-2 seconds per request
 - **Memory usage**: ~2-3 GB RAM
+- **Response size**: ~6 KB per embedding (binary format)
 
 The model is loaded once at startup and kept in memory for fast inference.
 
@@ -181,4 +212,5 @@ The model is loaded once at startup and kept in memory for fast inference.
 - Text embeddings use `max_length` padding as required by SigLIP
 - Image preprocessing handles various formats (JPEG, PNG, BMP, GIF, etc.)
 - Thread-safe model inference with PyTorch's `no_grad()` context
-- Embeddings are returned as flat arrays of 1152 floats
+- Embeddings returned as base64-encoded binary (float32, little-endian)
+- Binary format provides 64% bandwidth reduction vs JSON arrays

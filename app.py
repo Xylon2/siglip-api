@@ -7,6 +7,8 @@ from io import BytesIO
 import uvicorn
 import os
 from dotenv import load_dotenv
+import base64
+import numpy as np
 
 # Load environment variables from .env file if it exists
 load_dotenv()
@@ -31,8 +33,29 @@ class TextRequest(BaseModel):
         return v
 
 class EmbeddingResponse(BaseModel):
-    embedding: list[float]
-    shape: list[int]
+    embedding: str = Field(..., description="Base64-encoded binary float32 array")
+    shape: list[int] = Field(..., description="Shape of the array")
+    size_bytes: int = Field(..., description="Size of binary data in bytes")
+
+def encode_embedding_binary(embedding: list[float]) -> dict:
+    """
+    Encode embedding as base64 binary float32 format.
+
+    Args:
+        embedding: List of floats from model
+
+    Returns:
+        Dictionary with base64 string and metadata
+    """
+    arr = np.array(embedding, dtype=np.float32)
+    binary_data = arr.tobytes()
+    b64_string = base64.b64encode(binary_data).decode('ascii')
+
+    return {
+        "embedding": b64_string,
+        "shape": list(arr.shape),
+        "size_bytes": len(binary_data)
+    }
 
 class ModelService:
     def __init__(self):
@@ -136,26 +159,30 @@ async def health():
 
 @app.post("/embed/text", response_model=EmbeddingResponse)
 async def embed_text(request: TextRequest):
+    """
+    Generate text embedding in binary format (base64-encoded float32).
+
+    Returns ~6 KB for 1152-dimensional embeddings.
+    """
     try:
         embedding = model_service.get_text_embedding(request.text)
-        return EmbeddingResponse(
-            embedding=embedding,
-            shape=[len(embedding)]
-        )
+        return EmbeddingResponse(**encode_embedding_binary(embedding))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating text embedding: {str(e)}")
 
 @app.post("/embed/image/upload", response_model=EmbeddingResponse)
 async def embed_image_upload(file: UploadFile = File(...)):
+    """
+    Generate image embedding in binary format (base64-encoded float32).
+
+    Returns ~6 KB for 1152-dimensional embeddings.
+    """
     try:
         contents = await file.read()
         image = Image.open(BytesIO(contents))
 
         embedding = model_service.get_image_embedding(image)
-        return EmbeddingResponse(
-            embedding=embedding,
-            shape=[len(embedding)]
-        )
+        return EmbeddingResponse(**encode_embedding_binary(embedding))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating image embedding: {str(e)}")
 
