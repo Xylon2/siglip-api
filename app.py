@@ -90,6 +90,7 @@ class ModelService:
             text=[text],
             padding="max_length",
             max_length=64,
+            truncation=True,
             return_tensors="pt"
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
