@@ -13,7 +13,7 @@ import numpy as np
 # Load environment variables from .env file if it exists
 load_dotenv()
 
-app = FastAPI(title="SigLIP Embedding Service")
+app = FastAPI(title="SigLIP 2 Embedding Service")
 
 class TextRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=5000, description="Text to embed (1-5000 characters)")
@@ -69,9 +69,9 @@ class ModelService:
             self.device = torch.device("cpu")
             print("Using CPU")
 
-            print("Loading SigLIP model... (this may take a moment)")
-            self.model = AutoModel.from_pretrained("google/siglip-so400m-patch14-384")
-            self.processor = AutoProcessor.from_pretrained("google/siglip-so400m-patch14-384", use_fast=True)
+            print("Loading SigLIP 2 model... (this may take a moment)")
+            self.model = AutoModel.from_pretrained("google/siglip2-so400m-patch14-384")
+            self.processor = AutoProcessor.from_pretrained("google/siglip2-so400m-patch14-384")
 
             # Move model to device
             self.model = self.model.to(self.device)
@@ -79,54 +79,32 @@ class ModelService:
 
             print("Model loaded successfully on CPU!")
 
+    def _normalize_and_convert(self, features: torch.Tensor) -> list[float]:
+        """Normalize features and convert to list."""
+        features = features / features.norm(dim=-1, keepdim=True)
+        return features[0].cpu().numpy().tolist()
+
     def get_text_embedding(self, text: str) -> list[float]:
-        text_inputs = self.processor(
+        # SigLIP requires max_length padding as that's how the model was trained
+        inputs = self.processor(
             text=[text],
+            padding="max_length",
+            max_length=64,
             return_tensors="pt"
         )
-
-        # Move inputs to device
-        text_inputs = {k: v.to(self.device) for k, v in text_inputs.items()}
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         with torch.no_grad():
-            # Get text model outputs
-            text_outputs = self.model.text_model(**text_inputs)
-
-            # Extract embeddings - use pooler_output if available
-            if hasattr(text_outputs, 'pooler_output') and text_outputs.pooler_output is not None:
-                text_features = text_outputs.pooler_output
-            else:
-                # Fall back to last hidden state at position 0 (CLS token)
-                text_features = text_outputs.last_hidden_state[:, 0, :]
-
-        # Normalize (text_features should be [batch_size, embedding_dim])
-        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-
-        # Return first batch item as flat list
-        return text_features[0].cpu().numpy().tolist()
+            output = self.model.get_text_features(**inputs)
+            return self._normalize_and_convert(output.pooler_output)
 
     def get_image_embedding(self, image: Image.Image) -> list[float]:
-        image_inputs = self.processor(images=image, return_tensors="pt")
-
-        # Move inputs to device
-        image_inputs = {k: v.to(self.device) for k, v in image_inputs.items()}
+        inputs = self.processor(images=image, return_tensors="pt")
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         with torch.no_grad():
-            # Get vision model outputs
-            vision_outputs = self.model.vision_model(**image_inputs)
-
-            # Extract embeddings - use pooler_output if available
-            if hasattr(vision_outputs, 'pooler_output') and vision_outputs.pooler_output is not None:
-                image_features = vision_outputs.pooler_output
-            else:
-                # Fall back to last hidden state at position 0 (CLS token)
-                image_features = vision_outputs.last_hidden_state[:, 0, :]
-
-        # Normalize (image_features should be [batch_size, embedding_dim])
-        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
-
-        # Return first batch item as flat list
-        return image_features[0].cpu().numpy().tolist()
+            output = self.model.get_image_features(**inputs)
+            return self._normalize_and_convert(output.pooler_output)
 
 model_service = ModelService()
 
@@ -137,9 +115,9 @@ async def startup_event():
 @app.get("/")
 async def root():
     return {
-        "message": "SigLIP Embedding Service",
-        "version": "1.0.0",
-        "model": "google/siglip-so400m-patch14-384",
+        "message": "SigLIP 2 Embedding Service",
+        "version": "2.0.0",
+        "model": "google/siglip2-so400m-patch14-384",
         "embedding_dimension": 1152,
         "device": "cpu",
         "endpoints": {

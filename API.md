@@ -25,9 +25,9 @@ Returns metadata about the service, model, and available endpoints.
 **Response** (200 OK):
 ```json
 {
-  "message": "SigLIP Embedding Service",
-  "version": "1.0.0",
-  "model": "google/siglip-so400m-patch14-384",
+  "message": "SigLIP 2 Embedding Service",
+  "version": "2.0.0",
+  "model": "google/siglip2-so400m-patch14-384",
   "embedding_dimension": 1152,
   "device": "cpu",
   "endpoints": {

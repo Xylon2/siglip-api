@@ -1,6 +1,6 @@
-# SigLIP Embedding Microservice
+# SigLIP 2 Embedding Microservice
 
-A FastAPI microservice that provides vector embeddings for text and images using Google's SigLIP model.
+A FastAPI microservice that provides vector embeddings for text and images using Google's SigLIP 2 model.
 
 ## Features
 
@@ -191,11 +191,12 @@ similarity = np.dot(embedding1, embedding2)
 
 ### Model Information
 
-- **Model**: google/siglip-so400m-patch14-384
+- **Model**: google/siglip2-so400m-patch14-384 (SigLIP 2)
 - **Embedding Dimension**: 1152
 - **Normalization**: L2 normalized (ready for cosine similarity)
 - **Model Size**: ~1.5 GB
 - **Device**: CPU (optimized for broad compatibility)
+- **Improvements**: Enhanced location-awareness and fine-grained local semantics compared to SigLIP v1
 
 ### Performance
 
